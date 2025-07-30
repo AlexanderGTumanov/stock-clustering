@@ -1,1 +1,1 @@
-# stock-clustering
+# Stock Clustering
