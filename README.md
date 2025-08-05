@@ -14,12 +14,9 @@ The project is organized into three main directories: the ’/notebooks’ folde
 
 ## What It Does
 
-- Downloads historical stock prices from Yahoo Finance.
-- Computes daily returns and log returns.
-- Fits a simple ARCH model to estimate volatility and produce short-term volatility forecasts.
-- Builds and trains a PyTorch NN with the same functionality.
-- Plots and compares the predictions of the two models and accuracies of their forecasts.
-- A notebook file is provided, in which this workflow is implemented to model the behavior of three stocks in the aftermath of high-volatility events.
+- Downloads historical stock prices from Yahoo Finance for a given selection of tickers from different industries.
+- Builds and trains a PyTorch neural network (NN) that clusters these stocks together based on the behavior of their normalized log returns during a given period.
+- Plots and compares the predictions of the model with the idustry labels.
 
 ---
 
@@ -27,24 +24,27 @@ The project is organized into three main directories: the ’/notebooks’ folde
 
 1. Clone this repository:
    ```bash
-   git clone <https://github.com/AlexanderGTumanov/stock-analyzer>
-   cd <stock-analyzer>
+   git clone <https://github.com/AlexanderGTumanov/stock-clustering>
+   cd <stock-clustering>
 
 ---
 
 ## Contents of the Notebook
 
-Notebook `/notebooks/stock_analyzer.ipynb`. This notebook consists of two sections.
+Notebook `/notebooks/stock_clustering.ipynb`.
 
-In the first section, the ARCH model is used to fit the three stocks described above. Naturaly, the model does not have the capacity to predict the crash, so some information about it has to be included into the fit. For the BA stock, just the initial stages of the crash are sufficient for model to realize what is happening and model it accurately during the event and in it's aftermath. In the other two cases, the entire crash period is fed into the model and we are simply aiming to model the aftermath.
+---
 
-In the second section, the same datasets are analyzed using neural networks (NNs). The training ranges, fit lengths, and forecast horizons vary on a case-by-case basis. See the comments in the notebook for more details on how these parameters are selected. Once the NN forecasts are built, their accuracy is compared with that of the ARCH models.
+
+## Contents of the `/data` folder
+
+This folder contains the `default_tickers.py` module. In it, there is a list of tickers from selected industries: *tech*, *energy*, *finance*, *healthcare*, *utilities*, *materials*, and *real estate*.
 
 ---
 
 ## Contents of the `/src` folder
 
-The `/src` folder contains three modules: `analysis.py`, `model_arch.py`, `model_pytorch.py`.
+The `/src` folder contains the `model.py` module.
 
 ### `analysis.py`
 
