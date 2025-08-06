@@ -8,7 +8,7 @@ During stable periods, we expect the model’s clusters to correspond closely to
 
 We analyze the time evolution of these learned clusters, interpret what the model has captured in terms of stock behavior, and investigate specific examples where the model’s output diverges from traditional industry boundaries. The goal is to understand when and why such divergences occur, and what they reveal about market structure beyond static classifications.
 
-The project is organized into three main directories: the ’/notebooks’ folder, which contains the ’stock_clustering.ipynb’ notebook; the ’/src’ folder, which holds the source code file ’model.py’ with all the functions used in the notebook; and the ’/data’ folder, which contains the ’default_tickers.py’ file with the default selection of stock tickers pre-selected for this project, along with their industry labels. The time series data is retrieved from ’yfinance’.
+The project is organized into three main directories: the `/notebooks` folder, which contains the `stock_clustering.ipynb` notebook; the `/src` folder, which holds the source code file `model.py` with all the functions used in the notebook; and the `/data` folder, which contains the `default_tickers.py` file with the default selection of stock tickers pre-selected for this project, along with their industry labels. The time series data is retrieved from *yfinance*.
 
 ---
 
