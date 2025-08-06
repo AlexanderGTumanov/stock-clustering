@@ -16,7 +16,7 @@ The project is organized into three main directories: the ’/notebooks’ folde
 
 - Downloads historical stock prices from Yahoo Finance for a given selection of tickers from different industries.
 - Builds and trains a PyTorch neural network (NN) that clusters these stocks together based on the behavior of their normalized log returns during a given period.
-- Plots and compares the predictions of the model with the idustry labels.
+- Analyzes the time evolution of these clusters to identify stocks that deviate from the typical behavior of their industry.
 
 ---
 
