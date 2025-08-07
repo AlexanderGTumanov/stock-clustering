@@ -41,3 +41,15 @@ Notebook `/notebooks/stock_clustering.ipynb` is divided into two sections. In th
 This folder contains the `default_tickers.py` module. In it, there is a balanced list of tickers from selected industries: *tech*, *energy*, *finance*, *healthcare*, *utilities*, *materials*, and *real estate*.
 
 ---
+
+## Contents of the `/src` folder
+
+The `model.py` contains all the functions and tools used to perform analysis in the notebook. What follows is a brief description of them. 
+
+- **build_dataset(tickers, start, end, industries = None, shuffle = False, normalize = True, verbose = True)**:
+  This function retrieves a collection of time series from *yfinance* between the dates given by **start** and **end** that correspond to tickers contained in **tickers**. It then converts them to log returns. **tickers** must be organized in the form of a dictionary: `{'industry label': [tickers]}`. The industry labels are not used during training, but are recorded for comparisons with model's predictions. **industries** is an optional variable which can be given as a list of labels from the dictionary. Only Stocks with these labels will be considered. If not provided, all the stocks from **tickers** will be retrieved. The dataset constructed will be balanced: i.e. the numer of stocks per label will be the same. If some of the stocks fail to be retrieved, the function will discard stocks from other industrues until the balance is restored. If **shuffle** is `True`, this will happen randomly. If **normalize** is `True` (recommended) al the log returns series retrieved will be normalized. If **verbose** is `True` then the function will print the size of the dataset once it's constructed.
+  Tis function returns **X**, **y**, **t**, **industry_keys**, **index**. **X** is a torch tensor that contains all the log returns series; **y** and **t** are not necessary for the model to work, but become useful post-traing. The former contains all ithe industry lables of the stocks in **X**, encoded as integers, while the latter records their tickers. **industry_keys** is used to decode the values in **y** back into industry names. Lastly, **index** caontains the index of the extracted time series.
+- **log_returns(series: pd.Series)**:
+  Computes the logarithmic returns of **series**.
+- **rolling_mean(series: pd.Series, window: int = None)**:
+  Smooths **series** using a rolling mean. The window length is controlled by **window**; if not provided, it defaults to 1% of the total dataset length.
