@@ -44,12 +44,19 @@ This folder contains the `default_tickers.py` module. In it, there is a balanced
 
 ## Contents of the `/src` folder
 
-The `model.py` contains all the functions and tools used to perform analysis in the notebook. What follows is a brief description of them. 
+The **model.py** file contains all the functions and tools used to perform analysis in the notebook. What follows is a brief description of them.
 
 - **build_dataset(tickers, start, end, industries = None, shuffle = False, normalize = True, verbose = True)**:
-  This function retrieves a collection of time series from *yfinance* between the dates given by **start** and **end** that correspond to tickers contained in **tickers**. It then converts them to log returns. **tickers** must be organized in the form of a dictionary: `{'industry label': [tickers]}`. The industry labels are not used during training, but are recorded for comparisons with model's predictions. **industries** is an optional variable which can be given as a list of labels from the dictionary. Only Stocks with these labels will be considered. If not provided, all the stocks from **tickers** will be retrieved. The dataset constructed will be balanced: i.e. the numer of stocks per label will be the same. If some of the stocks fail to be retrieved, the function will discard stocks from other industrues until the balance is restored. If **shuffle** is `True`, this will happen randomly. If **normalize** is `True` (recommended) al the log returns series retrieved will be normalized. If **verbose** is `True` then the function will print the size of the dataset once it's constructed.
-  Tis function returns **X**, **y**, **t**, **industry_keys**, **index**. **X** is a torch tensor that contains all the log returns series; **y** and **t** are not necessary for the model to work, but become useful post-traing. The former contains all ithe industry lables of the stocks in **X**, encoded as integers, while the latter records their tickers. **industry_keys** is used to decode the values in **y** back into industry names. Lastly, **index** caontains the index of the extracted time series.
-- **log_returns(series: pd.Series)**:
-  Computes the logarithmic returns of **series**.
-- **rolling_mean(series: pd.Series, window: int = None)**:
-  Smooths **series** using a rolling mean. The window length is controlled by **window**; if not provided, it defaults to 1% of the total dataset length.
+   This function retrieves a collection of time series from **yfinance** between the dates given by **start** and **end** that correspond to tickers contained in **tickers**. It then converts them to log returns. **tickers** must be organized in the form of a dictionary: **{'industry label': [tickers]}**. The industry labels are not used during training, but are recorded for comparisons with the model's predictions. **industries** is an optional variable that can be given as a list of labels from the dictionary. Only stocks with these labels will be considered. If not provided, all the stocks from **tickers** will be retrieved. The dataset constructed will be balanced: i.e., the number of stocks per label will be the same. If some of the stocks fail to be retrieved, the function will discard stocks from other industries until the balance is restored. If **shuffle** is **True**, this will happen randomly. If **normalize** is **True** (recommended), all the log return series retrieved will be normalized. If **verbose** is **True**, then the function will print the size of the dataset once it's constructed.
+  
+  This function returns **X**, **y**, **t**, **industry_keys**, and **index**.<br>
+  &nbsp;&nbsp;&nbsp;**X** is a torch tensor that contains all the log return series.<br>
+  &nbsp;&nbsp;&nbsp;**y** and **t** are not necessary for the model to work, but become useful post-training. The former contains all the industry labels of the stocks in **X**, encoded as integers, while the latter records their tickers.<br>
+  &nbsp;&nbsp;&nbsp;**industry_keys** is used to decode the values in **y** back into industry names.<br>
+  &nbsp;&nbsp;&nbsp;**index** contains the index of the extracted time series.
+
+- **prepare_dataloaders(X, batch_size = 16, valid_split = 0.2, seed = 42)**:
+  Packages **X** into training and validation data loaders. **batch_size** controls the batch size, while **valid_split** specifies the proportion of data reserved for validation. The function returns *DataLoader()* objects **train_loader**, **valid_loader**.
+
+**DECModel(nn.Module)**, **Encoder(nn.Module)**, **ClusteringLayer(nn.Module)**:
+Deep Embedding Clustering (DEC) neural network. Consists of two layers: **Encoder** and **ClusteringLayer**. **Encoder** is a sequential layer that reduces the dimensionality of the input data by transferring it into a low-dimensional latent space. When fully trained, this space retains only the degrees of freedom that are essential for the clustering task. **ClusteringLayer** uses a Student's t-distribution kernel to compute the soft assignment of each latent point to a cluster. **DECModel** combines the two and returns **q**, which is the soft cluster assignment for each point, and **z**, the latent representations of the input data after passing through the encoder.
