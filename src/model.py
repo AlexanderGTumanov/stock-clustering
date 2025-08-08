@@ -212,18 +212,6 @@ def train_model(train_loader, valid_loader, max_epochs = None, min_epochs = 100,
     history = pd.DataFrame({"train": train_loss_history, "valid": valid_loss_history})
     return model, history
 
-def plot_loss_history(history: pd.DataFrame):
-    plt.figure(figsize = (10, 5))
-    plt.plot(history["train"], label = "Train Loss")
-    plt.plot(history["valid"], label = "Valid Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training and Validation Loss")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
 def predict_clusters(model, X):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
     model.eval()
@@ -301,7 +289,7 @@ def relabel_clusters(curr, prev, n_clusters, locked_assignments = None, current_
         mapping = dict(zip(col_ind, row_ind))
     return np.array([mapping[label] for label in curr])
 
-def cluster_mixing_evolution(tickers, start, end, n_clusters, industries = None, window = 60, step = 15, shuffle = False, lock_threshold = None):
+def cluster_evolution(tickers, start, end, n_clusters, industries = None, window = 60, step = 15, shuffle = False, lock_threshold = None):
     X, y, _, industry_keys, index = build_dataset(tickers, start, end, industries = industries, shuffle = shuffle, verbose = False)
     if len(X[0]) < window:
         raise ValueError("Window is larger than the series length.")
@@ -351,6 +339,51 @@ def cluster_mixing_evolution(tickers, start, end, n_clusters, industries = None,
     dates = pd.to_datetime([index[step * k + window // 2] for k in range(n_steps)])
     df = pd.DataFrame(data, columns = multi_cols, index = dates)
     return df
+
+def plot_log_returns(ticker, start, end, normalize = False):
+    if isinstance(ticker, str):
+        ticker = [ticker]
+    plt.figure(figsize = (10, 5))
+    found = False
+    for t in ticker:
+        df = yf.download(t, start = start, end = end, progress = False)
+        if df.empty or 'Close' not in df.columns:
+            continue
+        prices = df['Close'].dropna()
+        if isinstance(prices, pd.DataFrame):
+            prices = prices.squeeze()
+        log_returns = np.log(prices).diff().dropna()
+        if normalize:
+            std = log_returns.std()
+            mean = log_returns.mean()
+            if std == 0 or np.isnan(std):
+                continue
+            log_returns = (log_returns - mean) / std
+        if log_returns.empty:
+            continue
+        plt.plot(log_returns.index, log_returns.values, label = t)
+        found = True
+    if not found:
+        raise ValueError("No valid data found for any tickers.")
+    plt.xlabel('Date')
+    plt.ylabel('Normalized Log Returns' if normalize else 'Log Returns')
+    plt.title('Normalized Log Returns' if normalize else 'Log Returns')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+def plot_loss_history(history):
+    plt.figure(figsize = (10, 5))
+    plt.plot(history["train"], label = "Train Loss")
+    plt.plot(history["valid"], label = "Valid Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training and Validation Loss")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 def plot_tsne_clusters(clusters, y, z, industry_keys):
     tsne = TSNE(n_components = 2, random_state = 42)
@@ -416,36 +449,3 @@ def plot_cluster_proportions(df, rolling_window = None):
         plt.grid(True)
         plt.tight_layout()
         plt.show()
-
-def plot_log_returns(ticker, start: str, end: str, normalize = False):
-    if isinstance(ticker, str):
-        ticker = [ticker]
-    plt.figure(figsize = (10, 5))
-    found = False
-    for t in ticker:
-        df = yf.download(t, start = start, end = end, progress = False)
-        if df.empty or 'Close' not in df.columns:
-            continue
-        prices = df['Close'].dropna()
-        if isinstance(prices, pd.DataFrame):
-            prices = prices.squeeze()
-        log_returns = np.log(prices).diff().dropna()
-        if normalize:
-            std = log_returns.std()
-            mean = log_returns.mean()
-            if std == 0 or np.isnan(std):
-                continue
-            log_returns = (log_returns - mean) / std
-        if log_returns.empty:
-            continue
-        plt.plot(log_returns.index, log_returns.values, label = t)
-        found = True
-    if not found:
-        raise ValueError("No valid data found for any tickers.")
-    plt.xlabel('Date')
-    plt.ylabel('Normalized Log Returns' if normalize else 'Log Returns')
-    plt.title('Normalized Log Returns' if normalize else 'Log Returns')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
