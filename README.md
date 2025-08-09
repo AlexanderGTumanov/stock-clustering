@@ -51,8 +51,7 @@ The **model.py** file contains all the functions and tools used to perform analy
   
   This function returns **X**, **y**, **t**, **industry_keys**, and **index**.  
   &nbsp;&nbsp;&nbsp;**X** is a torch tensor that contains all the log return series.  
-  &nbsp;&nbsp;&nbsp;**y** and **t** are not necessary for the model to work, but become useful post-training. The former contains all the industry labels of the stocks in **X**, encoded as integers, while the latter records their tickers.  
-  &nbsp;&nbsp;&nbsp;**industry_keys** is used to decode the values in **y** back into industry names.  
+  &nbsp;&nbsp;&nbsp;**y** and **t** are not necessary for the model to work, but become useful post-training. The former contains all the industry labels of the stocks in **X**, while the latter records their tickers.  
   &nbsp;&nbsp;&nbsp;**index** contains the index of the extracted time series.
 
 - **prepare_dataloaders(X, batch_size = 16, valid_split = 0.2, seed = 42)**:  
@@ -70,10 +69,10 @@ The **model.py** file contains all the functions and tools used to perform analy
 - **predict_clusters(model, X)**:  
   &nbsp;&nbsp;&nbsp;Runs dataset **X** through the model and returns **z**, the latent-space representation of **X** obtained from the encoder, and **clusters**, the predicted cluster assignments.
 
-- **tickers_by_cluster(clusters, y, t, industry_keys)**:  
+- **tickers_by_cluster(clusters, y, t)**:  
   &nbsp;&nbsp;&nbsp;Builds a dataset with columns corresponding to clusters and rows to industry labels. Each entry contains the list of tickers from the given industry that were classified into the given cluster.
 
-- **mixing_table(clusters, y, industry_keys, verbose = False)**:  
+- **mixing_table(clusters, y, verbose = False)**:  
   &nbsp;&nbsp;&nbsp;Builds a dataset with columns corresponding to clusters and rows to industry labels. Each entry contains the proportion of the given industry within the given cluster. If **verbose** is True, the table is also printed.
 
 - **cluster_evolution(tickers, start, end, n_clusters, industries = None, window = 60, step = 15, shuffle = False, lock_threshold = None)**:  
@@ -90,8 +89,8 @@ The **model.py** file contains all the functions and tools used to perform analy
 - **plot_loss_history(history)**:  
   &nbsp;&nbsp;&nbsp;Plots the loss history returned by **train_model**.
 
-- **plot_tsne_clusters(clusters, y, z, industry_keys)**:  
-  &nbsp;&nbsp;&nbsp;Plots a 2D t-SNE projection of the model’s clusters. The first plot is color-coded by cluster label, and the second by industry label. **clusters** contains the model’s predicted cluster assignments, and **z** is the latent-space representation of the input data. Both are produced by the **predict_clusters** function. **y** is the industry label vector, and **industry_keys** is the dictionary mapping label indices to industry names.
+- **plot_tsne_clusters(clusters, y, z)**:  
+  &nbsp;&nbsp;&nbsp;Plots a 2D t-SNE projection of the model’s clusters. The first plot is color-coded by cluster label, and the second by industry label. **clusters** contains the model’s predicted cluster assignments, and **z** is the latent-space representation of the input data. Both are produced by the **predict_clusters** function, while **y** is the industry label list.
 
 - **plot_cluster_proportions(df, rolling_window = None)**:  
   &nbsp;&nbsp;&nbsp;Plots industry proportions for each cluster, based on **df** from **cluster_evolution**. If **rolling_window** is provided, applies a rolling median to smooth the data before plotting.
