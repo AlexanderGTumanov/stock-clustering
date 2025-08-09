@@ -21,8 +21,6 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 def build_dataset(tickers, start, end, industries = None, shuffle = False, normalize = True, verbose = True):
     if industries is None:
         industries = list(tickers.keys())
-    industry_keys = {i: ind for i, ind in enumerate(industries)}
-    industry_indices = {ind: i for i, ind in industry_keys.items()}
     index = pd.DatetimeIndex([])
     ticker_map = {}
     data = {}
@@ -77,17 +75,15 @@ def build_dataset(tickers, start, end, industries = None, shuffle = False, norma
             paired = paired[:min_count]
         for series, ticker in paired:
             X.append(series.values)
-            y.append(industry_indices[industry])
+            y.append(industry)
             t.append(ticker)
     if verbose:
         print(f"\nDataset constructed: {len(industries)} industries × {min_count} complete series each = {len(X)} total samples. Sample length is {len(index)}.")
     X = np.stack(X).astype(np.float32)
-    y = np.array(y, dtype = np.int64)
     X = torch.from_numpy(X)
-    y = torch.from_numpy(y)
     perm = torch.randperm(len(X))
-    X, y, t = X[perm], y[perm], [t[i] for i in perm.tolist()]
-    return X, y, t, industry_keys, index
+    X, y, t = X[perm], [y[i] for i in perm.tolist()], [t[i] for i in perm.tolist()]
+    return X, y, t, index
 
 def prepare_dataloaders(X, batch_size = 16, valid_split = 0.2, seed = 42):
     total_samples = len(X)
@@ -222,25 +218,26 @@ def predict_clusters(model, X):
         clusters = torch.argmax(q, dim = 1).cpu().numpy()
     return z, clusters
 
-def tickers_by_cluster(clusters, y, t, industry_keys):
+def tickers_by_cluster(clusters, y, t):
     industry_cluster_map = defaultdict(list)
-    for label, cluster, ticker in zip(y, clusters, t):
-        industry = industry_keys[int(label)]
+    for industry, cluster, ticker in zip(y, clusters, t):
         industry_cluster_map[(industry, cluster)].append(ticker)
-    industry_list = sorted(set(industry_keys.values()))
+    industry_list = sorted(set(y))
     cluster_list = sorted(set(clusters))
-    df = pd.DataFrame(index = industry_list, columns = [f"cluster {cluster + 1}" for cluster in cluster_list])
+    df = pd.DataFrame(
+        index=industry_list,
+        columns=[f"cluster {cluster + 1}" for cluster in cluster_list]
+    )
     for industry in industry_list:
         for cluster in cluster_list:
             df.at[industry, f"cluster {cluster + 1}"] = industry_cluster_map.get((industry, cluster), [])
     return df
 
-def mixing_table(clusters, y, industry_keys, verbose = False):
-    industries = [industry_keys[int(label)] for label in y]
-    counts = Counter(zip(industries, clusters))
-    norm = len(y) // len(set(industries))
-    industry_list = sorted(set(industry_keys.values()))
+def mixing_table(clusters, y, verbose=False):
+    counts = Counter(zip(y, clusters))
+    industry_list = sorted(set(y))
     cluster_list = sorted(set(clusters))
+    norm = (len(y) // len(industry_list)) if industry_list else 1
     proportions = {
         int(cluster): {
             industry: round(counts.get((industry, cluster), 0) / norm, 2)
@@ -250,10 +247,8 @@ def mixing_table(clusters, y, industry_keys, verbose = False):
     }
     if verbose:
         columns = [f"cluster {cluster + 1}" for cluster in cluster_list]
-        data = {
-            industry: [proportions[cluster][industry] for cluster in cluster_list]
-            for industry in industry_list
-        }
+        data = {industry: [proportions[cluster][industry] for cluster in cluster_list]
+                for industry in industry_list}
         df = pd.DataFrame.from_dict(data, orient = 'index', columns = columns)
         print("\nProportion of each industry assigned to each cluster:\n")
         print(df.to_string())
@@ -290,11 +285,11 @@ def relabel_clusters(curr, prev, n_clusters, locked_assignments = None, current_
     return np.array([mapping[label] for label in curr])
 
 def cluster_evolution(tickers, start, end, n_clusters, industries = None, window = 60, step = 15, shuffle = False, lock_threshold = None):
-    X, y, _, industry_keys, index = build_dataset(tickers, start, end, industries = industries, shuffle = shuffle, verbose = False)
+    X, y, _, index = build_dataset(tickers, start, end, industries = industries, shuffle = shuffle, verbose = False)
     if len(X[0]) < window:
         raise ValueError("Window is larger than the series length.")
     n_steps = (len(X[0]) - window) // step + 1
-    industry_list = sorted(set(industry_keys.values()))
+    industry_list = sorted(set(y))
     evolution = defaultdict(lambda: defaultdict(list))
     locked_assignments = {}
     prev_centers = None
@@ -308,7 +303,7 @@ def cluster_evolution(tickers, start, end, n_clusters, industries = None, window
         else:
             dec, _ = train_model(train_loader, valid_loader, n_clusters = n_clusters, centers = prev_centers, min_epochs = 20, patience = 10, lr = 5e-4)
         _, clusters = predict_clusters(dec, X_window)
-        mixing_pre = mixing_table(clusters, y, industry_keys, verbose = False)
+        mixing_pre = mixing_table(clusters, y, verbose = False)
         if prev_clusters is not None:
             if locked_assignments:
                 current_assignments = {ind: max(range(n_clusters), key = lambda c: mixing_pre.get(c, {}).get(ind, 0.0)) for ind in locked_assignments}
@@ -317,7 +312,7 @@ def cluster_evolution(tickers, start, end, n_clusters, industries = None, window
                 clusters = relabel_clusters(curr = clusters, prev = prev_clusters, n_clusters = n_clusters)
         prev_centers = dec.clustering.clusters.detach().cpu().clone()
         prev_clusters = clusters.copy()
-        mixing = mixing_table(clusters, y, industry_keys, verbose = False)
+        mixing = mixing_table(clusters, y, verbose = False)
         for c in range(n_clusters):
             for ind in industry_list:
                 evolution[c][ind].append(mixing.get(c, {}).get(ind, 0.0))
@@ -385,46 +380,34 @@ def plot_loss_history(history):
     plt.tight_layout()
     plt.show()
 
-def plot_tsne_clusters(clusters, y, z, industry_keys):
+def plot_tsne_clusters(clusters, y, z):
     tsne = TSNE(n_components = 2, random_state = 42)
     z_tsne = tsne.fit_transform(z)
-    _, axes = plt.subplots(1, 2, figsize = (14, 6))
     clusters = np.array(clusters)
     y = np.array(y)
+    _, axes = plt.subplots(1, 2, figsize = (14, 6))
     cluster_list = sorted(set(clusters))
     cluster_to_color = {c: plt.cm.tab10(i % 10) for i, c in enumerate(cluster_list)}
     cluster_colors = [cluster_to_color[c] for c in clusters]
     axes[0].scatter(z_tsne[:, 0], z_tsne[:, 1], color = cluster_colors, s = 10)
     axes[0].set_title('t-SNE of DEC Clusters')
     cluster_legend = [
-        Line2D(
-            [0], [0],
-            marker = 'o',
-            linestyle = '',
-            markerfacecolor = cluster_to_color[c],
-            markeredgecolor = 'none',
-            markersize = 5,
-            label = f"cluster {c + 1}"
-        )
+        Line2D([0], [0], marker = 'o', linestyle = '',
+               markerfacecolor = cluster_to_color[c], markeredgecolor = 'none',
+               markersize = 5, label = f"cluster {c + 1}")
         for c in cluster_list
     ]
     axes[0].legend(handles = cluster_legend)
-    industry_labels = range(len(industry_keys))
-    industry_to_color = {i: plt.cm.tab10(i % 10) for i in industry_labels}
-    industry_colors = [industry_to_color[i] for i in y]
+    industry_list = sorted(set(y.tolist()))
+    industry_to_color = {lab: plt.cm.tab10(i % 10) for i, lab in enumerate(industry_list)}
+    industry_colors = [industry_to_color[lab] for lab in y]
     axes[1].scatter(z_tsne[:, 0], z_tsne[:, 1], color = industry_colors, s = 10)
     axes[1].set_title('t-SNE Colored by Industry')
     industry_legend = [
-        Line2D(
-            [0], [0],
-            marker = 'o',
-            linestyle = '',
-            markerfacecolor = industry_to_color[i],
-            markeredgecolor = 'none',
-            markersize = 5,
-            label = industry_keys[i]
-        )
-        for i in industry_labels
+        Line2D([0], [0], marker = 'o', linestyle = '',
+               markerfacecolor = industry_to_color[lab], markeredgecolor = 'none',
+               markersize = 5, label = lab)
+        for lab in industry_list
     ]
     axes[1].legend(handles = industry_legend)
     plt.tight_layout()
