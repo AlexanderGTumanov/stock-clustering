@@ -116,7 +116,7 @@ class ClusteringLayer(nn.Module):
         self.dof = dof
 
     def forward(self, z):
-        dist = torch.sum((z.unsqueeze(1) - self.clusters) ** 2, dim=2)
+        dist = torch.sum((z.unsqueeze(1) - self.clusters) ** 2, dim = 2)
         q = 1.0 / (1.0 + dist / self.dof)
         q = q ** ((self.dof + 1.0) / 2.0)
         q = q / torch.sum(q, dim = 1, keepdim = True)
@@ -233,7 +233,7 @@ def tickers_by_cluster(clusters, y, t):
             df.at[industry, f"cluster {cluster + 1}"] = industry_cluster_map.get((industry, cluster), [])
     return df
 
-def mixing_table(clusters, y, verbose=False):
+def mixing_table(clusters, y, verbose = False):
     counts = Counter(zip(y, clusters))
     industry_list = sorted(set(y))
     cluster_list = sorted(set(clusters))
@@ -255,7 +255,7 @@ def mixing_table(clusters, y, verbose=False):
     return proportions
 
 def relabel_clusters(curr, prev, n_clusters, locked_assignments = None, current_assignments = None):
-    overlap = np.zeros((n_clusters, n_clusters), dtype=int)
+    overlap = np.zeros((n_clusters, n_clusters), dtype = int)
     for p, c in zip(prev, curr):
         overlap[p, c] += 1
     if locked_assignments and current_assignments:
